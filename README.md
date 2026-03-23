@@ -61,6 +61,66 @@ NMEA clean: Only GGA + RMC + GSA at 1 Hz (no GSV).
 This setup delivers 1–2 cm accuracy under canopy (multi-frequency + helical antenna + LoRa link <5–10 km line-of-sight).]
 
 ## App Requirements
-[Full app sections from above]
+Core Workflow (Your Original Request)
+Enter points (name + optional initial coordinates).
+Enter connections: bearing dd.mmss + distance (m).
+Each connection has isSkewBearing flag (Sabah RSO grid vs true bearing).
+Fix minimum 2 physical marks with live GNSS (RTK only).
+On every fix: entire old plan automatically scales, rotates, and translates (4-parameter similarity transformation) so all points “follow” the fixed marks. Fixed points stay locked.
+Data Model (Room – Final Version)
+@Entity
+data class Point(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    var planEast: Double = 0.0,      // metres after Bowditch + transformation
+    var planNorth: Double = 0.0,
+    var fixedLat: Double? = null,    // WGS84 from RTK
+    var fixedLon: Double? = null,
+    var isFixed: Boolean = false
+)
+
+@Entity
+data class Connection(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val fromPointId: Long,
+    val toPointId: Long,
+    val bearingDMS: String,          // "123.4555"
+    val distanceM: Double,
+    val isSkewBearing: Boolean = false   // Sabah-specific
+)
+Bearing Parser
+(Handles dd.mmss + skew flag – code as before.)
+Plan Building + Misclosure Handling (1800s Plans)
+Graph traversal → raw relative East/North.
+Automatic Bowditch adjustment on all loops (proportional to leg length).
+Optional full least-squares.
+Report: misclosure ratio (e.g. 1:850), post-adjustment RMS, warning if >1:1000.
+Handles huge 1800s errors perfectly.
+Core Transformation (Scale & Follow)
+Runs every time ≥2 points fixed.
+Least-squares similarity (scale + rotation + translation) using centroids.
+Computes residuals & overall RMS for all fixed points.
+Colour-coded: Green <15 cm, Yellow 15–40 cm, Red >40 cm.
+Fixed points locked; others update instantly.
+Respects skew-bearing flag for convergence if RSO coords imported.
+GNSS / BLE / RTK Integration
+Connect to “RoverRTK” Bluetooth SPP → parse clean 1 Hz NMEA.
+RTK quality gate: “Fix Point” button disabled unless GGA fix type = 4/5 (RTK Fixed) and accuracy < 3 cm.
+Auto-average 30–60 seconds on fix.
+Big banner: “RTK Fixed 1–2 cm” (or warning if autonomous).
+Live stakeout: distance + bearing (Vincenty) + arrow + voice guidance.
+Import / Export
+KML/KMZ full support: Points, LineStrings, closed Polygons (auto-creates points + connections + loop).
+Detects WGS84 vs RSO → datum handling prompt.
+CSV import/export.
+KML export for surveyor handoff.
+UI (Jetpack Compose + OSMdroid)
+Points list with live distance/bearing/residuals.
+Add connection screen with skew checkbox.
+KML polygon import screen.
+Live stakeout view (big arrow + voice).
+Transformation report screen (RMS map overlay).
+Tech Stack
+Kotlin + Compose + Room + NMEA parser + OSMdroid + Vincenty geodesy + Google KML parser.
 
 Last updated: March 2026
