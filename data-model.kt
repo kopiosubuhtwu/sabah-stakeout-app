@@ -18,3 +18,4 @@ data class Connection(
     val distanceM: Double,
     val isSkewBearing: Boolean = false   // Sabah-specific
 )
+
