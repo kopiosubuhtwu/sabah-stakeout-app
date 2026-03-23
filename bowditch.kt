@@ -61,3 +61,4 @@ fun parseBearingDMS(dms: String): Double {
 // Usage example in ViewModel:
 // After building graph, for each detected closed loop → call adjustBowditch → accumulate adjusted deltas → compute final planEast/North from starting point
 
+
